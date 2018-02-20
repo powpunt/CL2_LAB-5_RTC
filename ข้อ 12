@@ -1,0 +1,179 @@
+#include <Wire.h> 
+
+byte blinkPin = 13;
+byte SW0 = 4;
+byte SW1 = 5;
+byte SW2 = 6;
+byte SW3 = 7;
+byte SW4 =8;
+byte SW5 =9 ;
+
+void setup()
+
+{
+ Wire.begin();
+ Serial.begin(9600); 
+ pinMode(blinkPin, OUTPUT);
+ digitalWrite(blinkPin, 0);
+
+
+ pinMode(SW0, INPUT);  
+ pinMode(SW1, INPUT); 
+ pinMode(SW2, INPUT); 
+ pinMode(SW3, INPUT); 
+  pinMode(SW4, INPUT); 
+ pinMode(SW5, INPUT);  
+
+
+ digitalWrite(SW0, HIGH); 
+ digitalWrite(SW1, HIGH);
+ digitalWrite(SW2, HIGH);
+ digitalWrite(SW3, HIGH);
+  digitalWrite(SW4, HIGH);
+ digitalWrite(SW5, HIGH);
+}
+
+void loop()
+{
+ Wire.beginTransmission(0x68);
+ Wire.write(0);
+ Wire.endTransmission();
+
+ Wire.requestFrom(0x68, 9);
+ byte secs = Wire.read();
+ byte mins = Wire.read();
+ byte hrs = Wire.read();
+ byte day = Wire.read();
+ byte date = Wire.read();
+ byte month = Wire.read();
+ byte year = Wire.read();
+
+ // hours, minutes, seconds
+
+ Serial.print("The time is "); 
+ if (hrs < 10) Serial.print("0");
+ Serial.print(hrs,HEX);    
+ Serial.print(":");
+ if (mins < 10) Serial.print("0");
+ Serial.print(mins, HEX);
+ Serial.print(":");
+ if (secs < 10) Serial.print("0");
+ Serial.println(secs, HEX);
+
+ // use MM-DD-YYYY
+
+ Serial.print("The date is "); 
+  if (date < 10) Serial.print("0");
+ Serial.print(date, HEX);
+ Serial.print("-");
+
+ 
+ if (month < 10) Serial.print("0");
+ Serial.print(month,HEX);    
+ Serial.print("-");
+
+ Serial.print("20");
+ if (year < 10) Serial.print("0");
+ Serial.println(year, HEX);
+ Serial.println();
+
+
+ if (!(digitalRead(SW0))) set_time(); // hold the switch to set time
+ delay(1000);    //wait a second before next output
+ toggle(blinkPin);
+ 
+ 
+} 
+
+
+// toggle the state on a pin
+void toggle(int pinNum) 
+{  
+ int pinState = digitalRead(pinNum);
+ pinState = !pinState;
+ digitalWrite(pinNum, pinState); 
+}
+
+
+
+
+void set_time()   {
+ byte minutes = 0;
+ byte hours = 0;
+ byte month = 0;
+ byte year = 0;
+ byte date = 0;
+
+ 
+ {
+   while (!digitalRead(SW0)) //กดค้างแล้วเลือก SW 2-5 เพื่อ Set วัน
+   {
+   while (!digitalRead(SW1)) // set minutes
+   { 
+     minutes++;          
+     if ((minutes & 0x0f) > 9) minutes = minutes + 6;
+     if (minutes > 0x59) minutes = 0;
+     Serial.print("Minutes = ");
+     if (minutes <= 9) Serial.print("0");
+     Serial.println(minutes, HEX);
+
+     delay(200);
+   }
+
+   while (!digitalRead(SW2)) // set hours
+   { 
+     hours++;          
+     if ((hours & 0x0f) > 9) hours =  hours + 6;
+     if (hours > 0x23) hours = 0;
+     Serial.print("Hours = ");
+     if (hours <= 9) Serial.print("0");
+     Serial.println(hours, HEX);
+     delay(200);
+   }
+   
+   while (!digitalRead(SW3)) // set date
+   { 
+     month++;          
+     if ((month & 0x0f) > 9) month =  month + 6;
+     if (month > 0x12) month = 0;
+     Serial.print("month = ");
+     if (month <= 9) Serial.print("0");
+     Serial.println(month, HEX);
+     delay(200);
+   }
+   while (!digitalRead(SW4)) // set hours
+   { 
+     date++;          
+     if ((date & 0x0f) > 9) date =  date + 6;
+     if (date > 0x31) date = 0;
+     Serial.print("date = ");
+     if (date <= 9) Serial.print("0");
+     Serial.println(date, HEX);
+     delay(200);
+   }
+   
+   while (!digitalRead(SW5)) // set day
+   { 
+     year++;          
+     if ((year & 0x0f) > 9) year =  year + 6;
+     if (year > 0x31) year = 0;
+     Serial.print("year = ");
+     if (year <= 9) Serial.print("0");
+     Serial.println(year, HEX);
+     delay(200);
+   }
+}
+
+   Wire.beginTransmission(0x68); // activate DS1307
+   Wire.write(0); // where to begin
+   Wire.write(0x00);          //seconds
+   Wire.write(minutes);          //minutes
+   Wire.write(0x00 | hours);    //hours (24hr time)
+   Wire.write(0x00);  // Day 01-07
+   Wire.write(0x00 | date);  // Date 0-31
+   Wire.write(0x00 | month);  // month 0-12
+   Wire.write(0x00 | year);  // Year 00-99
+   Wire.write(0x00); // Control 0x10 produces a 1 HZ square wave on pin 7. 
+   Wire.endTransmission();
+ }     
+}
